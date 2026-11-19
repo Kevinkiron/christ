@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A Christmas Story</title>
+<meta name="theme-color" content="#120a07">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400;1,500&family=Great+Vibes&family=Lato:wght@300;400;700&display=swap">
+<style>
+/* One look, on purpose: a warm Christmas night. Layout: the film fills the screen —
+   the vertical cut on an upright phone, the landscape cut everywhere else. */
+:root {
+  --night: #120a07; --gold: #f6d57a; --gold-deep: #c9a24a; --paper: #fdf6ea; --ink: #3a2a20;
+  --display: 'Great Vibes', 'Pinyon Script', cursive; --serif: 'Cormorant Garamond', Georgia, serif; --sans: 'Lato', system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--night); color: var(--paper); font-family: var(--sans); overflow: hidden; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+
+.backdrop { position: fixed; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); filter: blur(28px) brightness(.55) saturate(1.2); }
+.frame { position: fixed; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100vw, calc(100vh * 9 / 16)); overflow: hidden; background: #000; }
+.frame.wide { left: 0; right: 0; width: 100%; transform: none; }
+.cam { position: absolute; inset: 0; transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
+.cam video, .cam .still, .cam canvas.rbg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: transparent; }
+#loopv { opacity: 0; }
+.cam video.react { opacity: 0; transition: opacity .35s ease; }
+.cam video.react.on { opacity: 1; }
+.wide .cam video.react { object-fit: contain; }
+.cam canvas.rbg { filter: blur(26px) brightness(.6) saturate(1.2); transform: scale(1.15); opacity: 0; transition: opacity .35s ease; }
+.cam canvas.rbg.on { opacity: 1; }
+.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.taps { position: absolute; inset: 0; cursor: pointer; touch-action: manipulation; }
+.flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--fxp, 50% 50%), rgba(255,247,220,.95), rgba(255,214,120,.55) 35%, rgba(255,200,100,0) 75%); }
+.flash.go { animation: flash .6s ease-out; }
+@keyframes flash { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
+
+.scrim-b { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: linear-gradient(to top, rgba(10,5,3,.78), transparent); pointer-events: none; transition: opacity .8s; }
+.scrim-t { position: absolute; left: 0; right: 0; top: 0; height: 26%; background: linear-gradient(to bottom, rgba(10,5,3,.72), transparent); pointer-events: none; opacity: 0; transition: opacity 1s; }
+.wide .scrim-t { right: auto; width: 55%; height: 100%; background: linear-gradient(to right, rgba(10,5,3,.62), rgba(10,5,3,.25) 55%, transparent); }
+.cap {
+  position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 7%); transform: translateX(-50%);
+  width: calc(100% - 36px); max-width: 640px; margin: 0; text-align: center; text-wrap: balance;
+  font: italic 500 clamp(19px, 2.4vw + 9px, 30px)/1.35 var(--serif); color: #fff3d8; text-shadow: 0 2px 14px rgba(0,0,0,.7);
+  opacity: 0; transition: opacity .7s ease; pointer-events: none;
+}
+.cap.on { opacity: 1; }
+.title { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 3.5%); text-align: center; pointer-events: none; opacity: 0; transform: translateY(-10px); transition: opacity .5s, transform 1s; padding: 0 16px; }
+.wide .title { left: 4%; right: auto; top: 9%; text-align: left; padding: 0; }
+.title.on { opacity: 1; transform: none; }
+.title b { display: block; font: 400 12px/1 var(--sans); letter-spacing: .5em; text-transform: uppercase; color: var(--gold); padding-left: .5em; }
+.wide .title b { padding-left: 0; }
+.title h1 {
+  margin: 6px 0 2px; font: 400 clamp(46px, 5vw + 26px, 96px)/1 var(--display);
+  background: linear-gradient(180deg, #fffbe6 8%, #f6d57a 55%, #d89f35 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 12px rgba(0,0,0,.6));
+}
+.title p { margin: 0; font: italic 400 clamp(17px, 1vw + 12px, 24px)/1.3 var(--serif); color: #fdf1d4; text-shadow: 0 2px 10px rgba(0,0,0,.7); }
+
+.ring { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 2px solid rgba(255, 222, 140, .85); box-shadow: 0 0 22px rgba(255, 200, 100, .6); animation: ring 1.8s ease-out infinite; pointer-events: none; }
+@keyframes ring { from { transform: scale(.55); opacity: 1; } to { transform: scale(1.35); opacity: 0; } }
+.hint { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 3.2%); transform: translateX(-50%); margin: 0; white-space: nowrap; font: 700 11px/1 var(--sans); letter-spacing: .3em; text-transform: uppercase; color: #f6dc97; text-shadow: 0 1px 8px #000; animation: blinkh 2.2s ease-in-out infinite; pointer-events: none; }
+@keyframes blinkh { 50% { opacity: .45; } }
+.tip {
+  position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 22%); transform: translateX(-50%);
+  width: max-content; max-width: min(520px, calc(100% - 28px)); text-align: center; text-wrap: balance;
+  padding: 10px 14px; border-radius: 14px; background: rgba(20, 10, 6, .66); border: 1px solid rgba(246, 213, 122, .3);
+  font: 400 13px/1.45 var(--sans); color: var(--paper); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  pointer-events: none; animation: tipin .6s ease both;
+}
+.wide .tip { top: auto; bottom: 14%; }
+.tip b { color: var(--gold); }
+@keyframes tipin { from { opacity: 0; } }
+.vnote { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: calc(100% - 48px); max-width: 360px; margin: 0; padding: 14px 16px; border-radius: 14px; text-align: center; background: rgba(20,10,6,.8); border: 1px solid rgba(246,213,122,.35); font: 400 14px/1.5 var(--sans); color: var(--paper); z-index: 26; }
+.bubble {
+  position: absolute; transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; pointer-events: none;
+  background: #fffdf6; color: var(--ink); font: 700 14px/1.2 var(--sans); padding: 9px 14px; border-radius: 16px;
+  box-shadow: 0 10px 26px -8px rgba(0,0,0,.6); animation: bub .35s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fffdf6; }
+.bubble.out { animation: bubout .3s ease forwards; }
+@keyframes bub { from { opacity: 0; transform: translate(-50%, calc(-100% + 4px)) scale(.6); } }
+@keyframes bubout { to { opacity: 0; transform: translate(-50%, calc(-100% - 18px)); } }
+
+.intro { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; text-align: center; padding: 24px 16px; background: radial-gradient(ellipse at 50% 45%, rgba(10,6,4,.25), rgba(6,3,2,.86) 78%); transition: opacity 1s ease; }
+.intro.gone { opacity: 0; pointer-events: none; }
+.intro .k { display: block; font: 400 12px/1 var(--sans); letter-spacing: .5em; text-transform: uppercase; color: var(--gold); padding-left: .5em; }
+.intro h2 { margin: 12px 0 6px; font: 400 clamp(56px, 6vw + 34px, 110px)/1 var(--display); background: linear-gradient(180deg, #fffbe6 8%, #f6d57a 55%, #d89f35 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255,205,110,.35)); }
+.intro p { margin: 0; font: italic 400 clamp(18px, 1vw + 13px, 24px)/1.4 var(--serif); }
+.intro small { display: block; margin-top: 14px; font: 300 12px/1.4 var(--sans); letter-spacing: .1em; color: rgba(253,246,234,.6); }
+.btn { font: 700 12px/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; border-radius: 999px; padding: 14px 24px; cursor: pointer; color: var(--gold); background: rgba(20,10,6,.55); border: 1px solid rgba(246,213,122,.5); }
+.btn-main { color: #3a1a0c; background: linear-gradient(180deg, #ffe7a2, #e9b54a); border-color: transparent; box-shadow: 0 8px 22px -8px rgba(233,181,74,.8); }
+.btn:focus-visible, .chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.begin { margin-top: 26px; display: inline-flex; align-items: center; gap: 10px; font-size: 13px; padding: 16px 28px; }
+.begin svg { width: 14px; height: 14px; }
+.chip { position: absolute; z-index: 25; display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px 9px 11px; border-radius: 999px; background: rgba(20,10,6,.55); color: var(--gold); border: 1px solid rgba(246,213,122,.35); font: 700 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.chip svg { width: 16px; height: 16px; }
+.snd { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.skip { left: max(12px, env(safe-area-inset-left, 0px)); top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.reopen { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
+.snd .off { display: none; }
+.snd[aria-pressed="false"] .on { display: none; }
+.snd[aria-pressed="false"] .off { display: inline; }
+.cardwrap { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: rgba(6,3,2,.5); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: fadein .4s ease both; }
+@keyframes fadein { from { opacity: 0; } }
+.card-pop { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; animation: cardin 1s cubic-bezier(.2,.9,.25,1.06) both; }
+@keyframes cardin { from { opacity: 0; transform: translate(var(--fx,0), var(--fy,0)) scale(.06) rotate(-12deg); } 35% { opacity: 1; } }
+.card { width: min(330px, 86%, 52vh); aspect-ratio: 3 / 4.2; padding: 26px 22px; text-align: center; display: flex; flex-direction: column; justify-content: center; gap: 12px; border-radius: 12px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,220,150,.2), transparent 60%), linear-gradient(160deg, #8c2434, #5a1520); border: 1px solid var(--gold-deep);
+  box-shadow: 0 0 0 6px rgba(201,162,74,.18), 0 30px 70px -18px rgba(0,0,0,.8), inset 0 0 0 8px rgba(201,162,74,.25), 0 0 60px rgba(255,200,110,.25); }
+.card h3 { margin: 0; font: 400 clamp(40px, 9vw, 56px)/1 var(--display); color: var(--gold); }
+.card .dear { margin: 6px 0 0; font: italic 500 21px/1.3 var(--serif); }
+.card .msg { margin: 0; font: italic 400 18px/1.5 var(--serif); color: rgba(253,246,234,.92); text-wrap: balance; }
+.card .from { margin: 8px 0 0; font: 700 11px/1.4 var(--sans); letter-spacing: .28em; text-transform: uppercase; color: var(--gold); }
+.card-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .ring, .hint, .card-pop, .cardwrap, .bubble { animation: none; } .cam { transition: none; } }
+</style>
+</head>
+<body>
+
+
+<canvas class="backdrop" id="backdrop" width="36" height="64" aria-hidden="true"></canvas>
+<main class="frame" id="frame">
+  <div class="cam" id="cam">
+    <img class="still" id="stillStart" alt="">
+    <img class="still" id="stillEnd" alt="" hidden>
+    <video id="mainv" playsinline webkit-playsinline preload="auto"></video>
+    <video id="loopv" playsinline webkit-playsinline muted loop preload="auto"></video>
+    <canvas class="rbg" id="rbg" width="36" height="64" aria-hidden="true"></canvas>
+    <video class="react" id="r1v" playsinline webkit-playsinline preload="metadata" src="media/react_santa.mp4"></video>
+    <video class="react" id="r2v" playsinline webkit-playsinline preload="metadata" src="media/react_elves.mp4"></video>
+  </div>
+  <div class="scrim-t" id="scrimT"></div>
+  <div class="scrim-b" id="scrimB"></div>
+  <div class="flash" id="flash"></div>
+  <canvas class="fx" id="fx"></canvas>
+  <div class="taps" id="taps" hidden></div>
+  <div class="fx" id="bubbles"></div>
+  <p class="cap" id="cap" aria-live="polite"></p>
+  <div class="title" id="title"><b>Merry</b><h1>Christmas</h1><p id="titleFor"></p></div>
+  <div class="ring" id="ring" hidden></div>
+  <p class="hint" id="hint" hidden>Tap the gift to open it</p>
+  <p class="tip" id="tip" hidden></p>
+  <p class="vnote" id="vnote" hidden>This viewer can't play the film. Open this card in Chrome or Safari to watch it. You can still open your gift.</p>
+
+  <button class="chip skip" id="skip" type="button" hidden>Skip</button>
+  <button class="chip snd" id="snd" type="button" aria-pressed="true" aria-label="Sound" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m22 9-6 6M16 9l6 6"/></svg>
+    <span class="on">Sound on</span><span class="off">Sound off</span>
+  </button>
+  <button class="chip reopen" id="reopen" type="button" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+    Your card
+  </button>
+
+  <div class="intro" id="intro">
+    <div>
+      <span class="k">A Christmas story</span>
+      <h2 id="introFor"></h2>
+      <p id="introFrom"></p>
+      <button class="btn btn-main begin" id="begin" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>Begin the story</button>
+      <small>Turn your sound on</small>
+    </div>
+  </div>
+
+  <div class="cardwrap" id="cardwrap" role="dialog" aria-modal="true" aria-label="Your Christmas card" hidden>
+    <div class="card-pop" id="cardpop">
+      <div class="card">
+        <h3>Merry Christmas</h3>
+        <p class="dear" id="cDear"></p>
+        <p class="msg" id="cMsg"></p>
+        <p class="from" id="cFrom"></p>
+      </div>
+      <div class="card-actions">
+        <button class="btn btn-main" id="explore" type="button">Keep exploring</button>
+        <button class="btn" id="again" type="button">Watch again</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ── sound: a music-box "Jingle Bells" (public domain, 1857), sleigh bells and wind, all synthesised ── */
+function createSound() {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  var ctx = null, master, verb, dry, timer = 0, next = 0, step = 0, on = false, wind = null;
+  var F = { C3: 130.81, D3: 146.83, G2: 98.0, F2: 87.31, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, C6: 1046.5, E6: 1318.5, G6: 1568 };
+  var BEAT = 0.32;
+  var A = [["E5",1],["E5",1],["E5",2],["E5",1],["E5",1],["E5",2],["E5",1],["G5",1],["C5",1.5],["D5",0.5],["E5",4],
+           ["F5",1],["F5",1],["F5",1.5],["F5",0.5],["F5",1],["E5",1],["E5",1],["E5",0.5],["E5",0.5],["E5",1],["D5",1],["D5",1],["E5",1],["D5",2],["G5",2]];
+  var B = [["E5",1],["E5",1],["E5",2],["E5",1],["E5",1],["E5",2],["E5",1],["G5",1],["C5",1.5],["D5",0.5],["E5",4],
+           ["F5",1],["F5",1],["F5",1.5],["F5",0.5],["F5",1],["E5",1],["E5",1],["E5",0.5],["E5",0.5],["G5",1],["G5",1],["F5",1],["D5",1],["C5",4]];
+  var MEL = A.concat(B), BARS = ["C3","C3","C3","C3","F2","C3","D3","G2","C3","C3","C3","C3","F2","C3","G2","C3"];
+  var events = [];
+  (function () {
+    var beat = 0;
+    MEL.forEach(function (n) { events.push({ b: beat, f: F[n[0]], kind: "m" }); beat += n[1]; });
+    for (var i = 0; i < 16; i++) {
+      events.push({ b: i * 4, f: F[BARS[i]], kind: "b" });
+      events.push({ b: i * 4 + 2, f: F[BARS[i]] * 1.5, kind: "b" });
+      for (var k = 0; k < 4; k++) events.push({ b: i * 4 + k + 0.5, kind: "j", v: k % 2 ? 0.8 : 0.5 });
+    }
+    events.sort(function (a, b) { return a.b - b.b; });
+  })();
+  var LOOP = 64;
+
+  function noiseBuf(sec) {
+    var b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sec), ctx.sampleRate), d = b.getChannelData(0);
+    for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function init() {
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+    dry = ctx.createGain(); dry.gain.value = 0.8; dry.connect(master);
+    verb = ctx.createConvolver();
+    var len = ctx.sampleRate * 2.6, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (var c = 0; c < 2; c++) { var d = ir.getChannelData(c); for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    verb.buffer = ir;
+    var wet = ctx.createGain(); wet.gain.value = 0.35; verb.connect(wet); wet.connect(master);
+    /* wind */
+    var src = ctx.createBufferSource(); src.buffer = noiseBuf(4); src.loop = true;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 170; lp.Q.value = 0.7;
+    var lfo = ctx.createOscillator(); lfo.frequency.value = 0.31; var lfoG = ctx.createGain(); lfoG.gain.value = 60;
+    lfo.connect(lfoG); lfoG.connect(lp.frequency);
+    var wg = ctx.createGain(); wg.gain.value = 0.09;
+    src.connect(lp); lp.connect(wg); wg.connect(master); src.start(); lfo.start();
+    wind = wg;
+  }
+  function bell(f, t, v, len) {
+    [[1, 1], [2, 0.22], [4.07, 0.05]].forEach(function (p) {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = f * p[0];
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v * p[1], t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + (len || 1.4) / p[0] * 1.2);
+      o.connect(g); g.connect(dry); g.connect(verb);
+      o.start(t); o.stop(t + (len || 1.4) * 1.3);
+    });
+  }
+  function bass(f, t) {
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.9);
+    o.connect(g); g.connect(dry); o.start(t); o.stop(t + 1);
+  }
+  var jb = null;
+  function jingle(t, v) {
+    if (!jb) jb = noiseBuf(0.2);
+    for (var k = 0; k < 3; k++) {
+      var s = ctx.createBufferSource(); s.buffer = jb;
+      var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 6500 + Math.random() * 3000; bp.Q.value = 6;
+      var g = ctx.createGain(), tt = t + k * 0.018 + Math.random() * 0.01;
+      g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(0.09 * v, tt + 0.003); g.gain.exponentialRampToValueAtTime(0.0005, tt + 0.13);
+      s.connect(bp); bp.connect(g); g.connect(dry); g.connect(verb); s.start(tt, Math.random() * 0.05); s.stop(tt + 0.15);
+    }
+  }
+  function crackle(t, v) {
+    if (!jb) jb = noiseBuf(0.2);
+    var s = ctx.createBufferSource(); s.buffer = jb;
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1200 + Math.random() * 3500;
+    var g = ctx.createGain(), d = 0.008 + Math.random() * 0.04;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime((v || 1) * (0.04 + Math.random() * 0.13), t + 0.002); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
+    s.connect(hp); hp.connect(g); g.connect(dry); s.start(t, Math.random() * 0.1); s.stop(t + d + 0.02);
+  }
+  function tick() {
+    if (Math.random() < 0.32) crackle(ctx.currentTime + Math.random() * 0.08, 0.8);
+    while (next < ctx.currentTime + 0.35) {
+      var e = events[step % events.length];
+      var loop = Math.floor(step / events.length);
+      var t = Math.max(next, ctx.currentTime);
+      if (e.kind === "m") bell(e.f, t, 0.16, 1.6);
+      else if (e.kind === "b") bass(e.f, t);
+      else jingle(t, e.v);
+      step++;
+      var n = events[step % events.length];
+      var nb = n.b + Math.floor(step / events.length) * LOOP;
+      next = start + nb * BEAT;
+    }
+  }
+  var start = 0;
+  return {
+    get on() { return on; },
+    play: function () {
+      if (!ctx) init();
+      if (ctx.state === "suspended") ctx.resume();
+      if (on) return;
+      on = true;
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setTargetAtTime(0.7, ctx.currentTime, 0.4);
+      start = ctx.currentTime + 0.15 - (events[step % events.length].b + Math.floor(step / events.length) * LOOP) * BEAT;
+      next = start + (events[step % events.length].b + Math.floor(step / events.length) * LOOP) * BEAT;
+      timer = setInterval(tick, 80);
+      tick();
+    },
+    pause: function () {
+      if (!ctx || !on) return;
+      on = false;
+      clearInterval(timer);
+      master.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+    },
+    sfx: function (name, v) {
+      if (!ctx || !on) return;
+      var t = ctx.currentTime + 0.01, i;
+      function tone(type, f0, f1, dur, vol, at) {
+        var o = ctx.createOscillator(), g = ctx.createGain(), tt = t + (at || 0);
+        o.type = type; o.frequency.setValueAtTime(f0, tt); if (f1) o.frequency.exponentialRampToValueAtTime(f1, tt + dur * 0.8);
+        g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(vol, tt + 0.01); g.gain.exponentialRampToValueAtTime(0.0005, tt + dur);
+        o.connect(g); g.connect(dry); g.connect(verb); o.start(tt); o.stop(tt + dur + 0.05);
+      }
+      function hiss(f0, f1, dur, vol, q) {
+        var s = ctx.createBufferSource(); s.buffer = noiseBuf(dur + 0.1);
+        var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = q || 1.2;
+        bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur);
+        var g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+        s.connect(bp); bp.connect(g); g.connect(dry); g.connect(verb); s.start(t); s.stop(t + dur + 0.1);
+      }
+      var PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5];
+      if (name === "boing") { tone("sine", 160, 520, 0.28, 0.22); tone("sine", 520, 240, 0.35, 0.16, 0.22); }
+      else if (name === "giggle") { [1318.5, 1568, 1760, 2093, 1760, 2349].forEach(function (f, k) { tone("triangle", f, f * 1.04, 0.09, 0.07, k * 0.07); }); }
+      else if (name === "toss") { hiss(500, 3000, 0.4, 0.14, 2); bell(1046.5, t + 0.9, 0.12, 1.2); }
+      else if (name === "jingle") { for (i = 0; i < (v === 2 ? 18 : 10); i++) jingle(t + i * 0.055 + Math.random() * 0.02, 1); }
+      else if (name === "sparkle") { var base = v === 2 ? 2 : v === 1 ? 1.5 : 1; ["C5", "E5", "G5", "C6", "E6", "G6"].forEach(function (n, k) { bell(F[n] * base, t + k * 0.06, 0.1, 1.6); }); }
+      else if (name === "note") { bell(PENTA[(v || 0) % PENTA.length], t, 0.2, 2.2); }
+      else if (name === "pop") { tone("sine", 900, 180, 0.16, 0.25); jingle(t + 0.05, 1); }
+      else if (name === "crunch") { for (i = 0; i < 3; i++) { var s2 = ctx.createBufferSource(); s2.buffer = noiseBuf(0.12); var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 1400 + Math.random() * 900; var g2 = ctx.createGain(), tt = t + i * 0.045; g2.gain.setValueAtTime(0.0, tt); g2.gain.linearRampToValueAtTime(0.18, tt + 0.005); g2.gain.exponentialRampToValueAtTime(0.0005, tt + 0.09); s2.connect(lp); lp.connect(g2); g2.connect(dry); s2.start(tt); s2.stop(tt + 0.12); } }
+      else if (name === "fire") { hiss(220, 1400, 1.1, 0.22, 0.7); for (i = 0; i < 22; i++) crackle(t + Math.random() * 1.2, 1.4); }
+      else if (name === "meow") {
+        var o1 = ctx.createOscillator(), bp = ctx.createBiquadFilter(), gm = ctx.createGain();
+        o1.type = "sawtooth"; o1.frequency.setValueAtTime(480, t); o1.frequency.linearRampToValueAtTime(760, t + 0.22); o1.frequency.linearRampToValueAtTime(520, t + 0.62);
+        bp.type = "bandpass"; bp.Q.value = 5; bp.frequency.setValueAtTime(800, t); bp.frequency.linearRampToValueAtTime(1600, t + 0.25); bp.frequency.linearRampToValueAtTime(950, t + 0.62);
+        gm.gain.setValueAtTime(0, t); gm.gain.linearRampToValueAtTime(0.2, t + 0.06); gm.gain.setValueAtTime(0.2, t + 0.45); gm.gain.exponentialRampToValueAtTime(0.0005, t + 0.7);
+        o1.connect(bp); bp.connect(gm); gm.connect(dry); gm.connect(verb); o1.start(t); o1.stop(t + 0.75);
+      }
+      else if (name === "toot") {
+        [440, 554.4].forEach(function (f) {
+          var o2 = ctx.createOscillator(), lp2 = ctx.createBiquadFilter(), g3 = ctx.createGain();
+          o2.type = "square"; o2.frequency.value = f; lp2.type = "lowpass"; lp2.frequency.value = 1300;
+          g3.gain.setValueAtTime(0, t); g3.gain.linearRampToValueAtTime(0.06, t + 0.03); g3.gain.setValueAtTime(0.06, t + 0.32); g3.gain.linearRampToValueAtTime(0, t + 0.42);
+          g3.gain.linearRampToValueAtTime(0.06, t + 0.5); g3.gain.setValueAtTime(0.06, t + 0.9); g3.gain.exponentialRampToValueAtTime(0.0005, t + 1.05);
+          o2.connect(lp2); lp2.connect(g3); g3.connect(dry); g3.connect(verb); o2.start(t); o2.stop(t + 1.1);
+        });
+      }
+      else if (name === "puff") { hiss(900, 300, 0.3, 0.12, 0.6); }
+      else if (name === "whoosh") { hiss(2600, 380, 0.9, 0.1, 0.8); bell(1568, t + 0.15, 0.05, 1.5); }
+    },
+    chime: function () {
+      if (!ctx || !on) return;
+      var t = ctx.currentTime + 0.02;
+      ["C5", "E5", "G5", "C6", "E6", "G6"].forEach(function (n, i) { bell(F[n], t + i * 0.07, 0.14, 2.2); });
+      for (var i = 0; i < 10; i++) jingle(t + i * 0.05, 1);
+    }
+  };
+}
+
+
+</script>
+<script>
+(function () {
+  /* ── who the card is for: from the link, e.g. ?to=Anna&from=Rahul%20%26%20Meera&msg=… ── */
+  var q = new URLSearchParams(location.search);
+  var TO = (q.get("to") || "Anna").slice(0, 40);
+  var FROM = (q.get("from") || "Rahul & Meera").slice(0, 60);
+  var MSG = (q.get("msg") || "Wishing you a Christmas as warm and bright as the lights on the tree.").slice(0, 240);
+  document.title = "A Christmas Story for " + TO;
+  document.getElementById("introFor").textContent = "for " + TO;
+  document.getElementById("introFrom").textContent = FROM ? "with love, from " + FROM : "";
+  document.getElementById("titleFor").textContent = "A little gift for " + TO;
+  document.getElementById("cDear").textContent = "Dear " + TO + ",";
+  document.getElementById("cMsg").textContent = MSG;
+  document.getElementById("cFrom").textContent = FROM ? "From " + FROM : "";
+
+  var CAPTIONS = [
+    [0.4, 4.6, "On Christmas Eve, snow fell softly over the sleeping forest…"],
+    [4.9, 9.4, "…and Santa arrived with one very special gift."],
+    [9.7, 13.2, "A gift for " + TO + ", glowing with Christmas magic."],
+    [13.5, 17.3, "Inside, some very excited friends were waiting!"],
+    [17.6, 21, FROM ? "Merry Christmas, " + TO + "! With love, " + FROM + "." : "Merry Christmas, " + TO + "!"],
+  ];
+
+  /* ── two cuts of the same film: vertical for upright phones, landscape for everything else.
+     Tap spots are in % of each cut's last shot. ── */
+  var SETS = {
+    port: {
+      vw: 1080, vh: 1920, main: "media/port_main.mp4", loop: "media/port_loop.mp4", start: "media/port_start.jpg", end: "media/port_end.jpg",
+      gift: [46, 79],
+      spots: [
+        { id: "gift", boxes: [[35, 73, 57, 87]] },
+        { id: "star", boxes: [[30, 11, 44, 21]], at: [37, 13] },
+        { id: "santa", boxes: [[57, 33, 97, 80], [43, 40, 57, 53]], at: [71, 33] },
+        { id: "elf1", boxes: [[5, 68, 21, 85]], at: [12, 68] },
+        { id: "elf2", boxes: [[20, 69, 34, 85]], at: [27, 69] },
+        { id: "cat", boxes: [[59, 76, 95, 88]], at: [70, 76] },
+        { id: "wreath", boxes: [[71, 20, 93, 34]], at: [82, 27] },
+        { id: "wreath", boxes: [[4, 33, 16, 43]], at: [10, 38] },
+        { id: "stocking", boxes: [[84, 40, 100, 53]], at: [91, 44] },
+        { id: "tree", tri: [[37, 17], [60, 67], [5, 67]] },
+        { id: "rug", boxes: [[0, 86, 100, 97]] },
+      ],
+    },
+    land: {
+      vw: 1920, vh: 1080, main: "media/land_main.mp4", loop: "media/land_loop.mp4", start: "media/land_start.jpg", end: "media/land_end.jpg",
+      gift: [49, 86],
+      spots: [
+        { id: "gift", boxes: [[43, 79, 55, 96]] },
+        { id: "star", boxes: [[41, 0, 49, 7]], at: [45, 4] },
+        { id: "santa", boxes: [[57, 20, 81, 82], [51, 30, 58, 47]], at: [66, 21] },
+        { id: "elf1", boxes: [[28, 72, 35, 93]], at: [32, 72] },
+        { id: "elf2", boxes: [[35, 73, 43, 93]], at: [39, 73] },
+        { id: "cat", boxes: [[56, 80, 75, 96]], at: [64, 80] },
+        { id: "wreath", boxes: [[64, 7, 76, 25]], at: [70, 16] },
+        { id: "wreath", boxes: [[28, 27, 34, 40]], at: [31, 33] },
+        { id: "stocking", boxes: [[76, 35, 84, 53]], at: [80, 38] },
+        { id: "window", boxes: [[1, 12, 17, 56]], at: [9, 20] },
+        { id: "fire", boxes: [[81, 55, 93, 80]], at: [87, 60] },
+        { id: "tree", tri: [[45, 3], [60, 79], [27, 79]] },
+        { id: "rug", boxes: [[17, 86, 90, 100]] },
+      ],
+    },
+  };
+  var LINES = {
+    santa: { say: function () { return "Ho ho ho! Merry Christmas, " + TO + "!"; }, sfx: "jingle", fx: "sparkle", clip: "r1" },
+    elf1: { say: function () { return "Wheee!"; }, sfx: "giggle", fx: "confetti", clip: "r2" },
+    elf2: { say: function () { return "Merry Christmas!"; }, sfx: "giggle", fx: "confetti", clip: "r2" },
+    cat: { say: function () { return "Purrr…"; }, sfx: "meow", fx: "hearts" },
+    wreath: { sfx: "sparkle1", fx: "ring" },
+    stocking: { sfx: "pop", fx: "confetti" },
+    tree: { sfx: "sparkle0", fx: "twinkle" },
+    rug: { sfx: "crunch", fx: "fluff" },
+    window: { sfx: "whoosh", fx: "snow" },
+    fire: { sfx: "fire", fx: "embers" },
+  };
+
+  var frame = document.getElementById("frame"), cam = document.getElementById("cam"), fx = document.getElementById("fx"), ctx = fx.getContext("2d");
+  var mainv = document.getElementById("mainv"), loopv = document.getElementById("loopv"), r1v = document.getElementById("r1v"), r2v = document.getElementById("r2v");
+  var stillStart = document.getElementById("stillStart"), stillEnd = document.getElementById("stillEnd"), vnote = document.getElementById("vnote");
+  var taps = document.getElementById("taps"), bubLayer = document.getElementById("bubbles");
+  var cap = document.getElementById("cap"), title = document.getElementById("title"), ring = document.getElementById("ring"), hint = document.getElementById("hint"), tip = document.getElementById("tip");
+  var intro = document.getElementById("intro"), skip = document.getElementById("skip"), sndBtn = document.getElementById("snd"), reopen = document.getElementById("reopen");
+  var cardwrap = document.getElementById("cardwrap"), cardpop = document.getElementById("cardpop");
+  var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var sound = typeof createSound === "function" ? createSound() : null;
+  var soundOn = true, phase = "intro", opened = false, tipShown = false, reacting = null;
+  var SET = null, setName = "";
+
+  function failed(v) { return v.dataset.state === "failed"; }
+  [mainv, loopv, r1v, r2v].forEach(function (v) { v.addEventListener("error", function () { v.dataset.state = "failed"; }); });
+
+  /* choose the cut that fits the screen; switch cleanly if the phone is turned */
+  function pickSet() {
+    var name = window.innerWidth >= window.innerHeight ? "land" : "port";
+    if (name === setName) return;
+    var t = mainv.currentTime || 0, wasPlaying = !mainv.paused, loopT = loopv.currentTime || 0;
+    setName = name; SET = SETS[name];
+    frame.classList.toggle("wide", name === "land");
+    stillStart.src = SET.start; stillEnd.src = SET.end; mainv.poster = SET.start;
+    mainv.dataset.state = ""; loopv.dataset.state = "";
+    mainv.src = SET.main; loopv.src = SET.loop;
+    if (phase === "story") { mainv.addEventListener("loadedmetadata", function once() { mainv.removeEventListener("loadedmetadata", once); mainv.currentTime = t; if (wasPlaying) mainv.play().catch(function () {}); }); }
+    if (phase === "loop") { loopv.style.opacity = "0"; loopv.addEventListener("loadedmetadata", function once() { loopv.removeEventListener("loadedmetadata", once); loopv.currentTime = loopT % (loopv.duration || 3); loopv.play().catch(function () {}); }); }
+  }
+  mainv.addEventListener("playing", function () { stillStart.hidden = true; });
+  loopv.addEventListener("playing", function () { if (phase === "loop") loopv.style.opacity = "1"; });
+
+  /* film % → pixels in the frame (the film fills the frame like object-fit: cover) */
+  var FW = 1, FH = 1, S = 1, OX = 0, OY = 0, DPR = 1;
+  function layout() {
+    pickSet();
+    var r = frame.getBoundingClientRect();
+    FW = r.width; FH = r.height;
+    S = Math.max(FW / SET.vw, FH / SET.vh);
+    OX = (FW - SET.vw * S) / 2; OY = (FH - SET.vh * S) / 2;
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    fx.width = Math.round(FW * DPR); fx.height = Math.round(FH * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    placeRing();
+  }
+  var P = function (px, py) { return [OX + (px / 100) * SET.vw * S, OY + (py / 100) * SET.vh * S]; };
+  var toPct = function (x, y) { return [((x - OX) / (SET.vw * S)) * 100, ((y - OY) / (SET.vh * S)) * 100]; };
+  window.addEventListener("resize", layout);
+
+  var inBox = function (b, x, y) { return x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]; };
+  var inTri = function (t, x, y) {
+    var a = t[0], b = t[1], c = t[2];
+    var d = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+    var l1 = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / d;
+    var l2 = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / d;
+    return l1 >= 0 && l2 >= 0 && l1 + l2 <= 1;
+  };
+  function spotAt(x, y) {
+    var list = SET.spots;
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i];
+      if (s.boxes && s.boxes.some(function (b) { return inBox(b, x, y); })) return s;
+      if (s.tri && inTri(s.tri, x, y)) return s;
+    }
+    return null;
+  }
+
+  /* ── particles drawn over the film ── */
+  var parts = [], shooting = [];
+  function add(p) { parts.push(p); }
+  function burst(x, y, n, kind, o) {
+    o = o || {};
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, sp = (o.speed || 160) * (0.3 + Math.random());
+      add({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (o.lift || 120), g: o.g == null ? 260 : o.g, life: 0, max: (o.life || 1.2) * (0.6 + Math.random() * 0.7),
+        s: (o.size || 3) * (0.5 + Math.random()), kind: kind, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, delay: o.stagger ? Math.random() * o.stagger : 0,
+        c: o.colors ? o.colors[i % o.colors.length] : null });
+    }
+  }
+  var GOLD = ["#fff3c0", "#ffd56a", "#ffe9a8", "#ffffff"], CONF = ["#e8313b", "#ffd25a", "#3cc46a", "#4aa3ff", "#ffffff", "#ff8ad0"];
+  function effect(kind, x, y, spot) {
+    var u = (S * SET.vw) / 100, v = (S * SET.vh) / 100, k;
+    if (kind === "sparkle") burst(x, y, 60, "star", { colors: GOLD, size: 3.4, speed: 200, life: 1.4 });
+    if (kind === "confetti") burst(x, y, 70, "conf", { colors: CONF, size: 5, speed: 220, lift: 220, g: 420, life: 1.8 });
+    if (kind === "hearts") { for (k = 0; k < 9; k++) add({ x: x + (Math.random() - 0.5) * 6 * u, y: y, vx: (Math.random() - 0.5) * 30, vy: -60 - Math.random() * 60, g: -10, life: 0, max: 1.8, s: 9 + Math.random() * 6, kind: "heart", rot: 0, vr: 0, delay: k * 0.12, c: k % 2 ? "#ff7a9a" : "#ffb3c6" }); burst(x, y, 20, "star", { colors: GOLD, size: 2.4, speed: 90, life: 1 }); }
+    if (kind === "fluff") burst(x, y, 50, "dot", { colors: ["#ffffff", "#fff4e4"], size: 3, speed: 110, lift: 160, g: 320, life: 1 });
+    if (kind === "embers") burst(x, y, 70, "star", { colors: ["#ffb347", "#ff7a2e", "#ffd56a"], size: 2.6, speed: 90, lift: 260, g: -40, life: 1.6 });
+    if (kind === "snow") { var b0 = spot.boxes[0]; for (k = 0; k < 70; k++) { var sp = P(b0[0] + Math.random() * (b0[2] - b0[0]), b0[1] + Math.random() * 10); add({ x: sp[0], y: sp[1], vx: 40 + Math.random() * 60, vy: 40 + Math.random() * 80, g: 20, life: 0, max: 1.6 + Math.random(), s: 1.5 + Math.random() * 2.5, kind: "dot", rot: 0, vr: 0, delay: Math.random() * 0.6, c: "#ffffff" }); } shooting.push({ x: P(b0[2], b0[1])[0], y: P(b0[2], b0[1] + 6)[1], vx: -(b0[2] - b0[0]) * u * 1.4, vy: 8 * v, life: 0, max: 0.8, len: 70 }); }
+    if (kind === "ring") { var b = spot.boxes[0], c = P((b[0] + b[2]) / 2, (b[1] + b[3]) / 2), rr = ((b[2] - b[0]) / 2) * u * 0.78; for (k = 0; k < 36; k++) { var a = (k / 36) * Math.PI * 2; add({ x: c[0] + Math.cos(a) * rr, y: c[1] + Math.sin(a) * rr, vx: 0, vy: 0, g: 0, life: 0, max: 0.9, s: 4, kind: "star", rot: 0, vr: 0, delay: k * 0.03, c: k % 3 ? "#ffd56a" : "#ff6a5a" }); } }
+    if (kind === "twinkle") { var t = spot.tri; for (k = 0; k < 80; k++) { var r1 = Math.random(), r2 = Math.random(); if (r1 + r2 > 1) { r1 = 1 - r1; r2 = 1 - r2; } var px = t[0][0] + r1 * (t[1][0] - t[0][0]) + r2 * (t[2][0] - t[0][0]), py = t[0][1] + r1 * (t[1][1] - t[0][1]) + r2 * (t[2][1] - t[0][1]); var pp = P(px, py); add({ x: pp[0], y: pp[1], vx: 0, vy: 0, g: 0, life: 0, max: 0.7 + Math.random() * 0.5, s: 3 + Math.random() * 3, kind: "star", rot: 0, vr: 0, delay: (1 - (py - t[0][1]) / (t[1][1] - t[0][1])) * 0.9 + Math.random() * 0.2, c: ["#fff2b0", "#ffd56a", "#ff8a6a", "#9ad8ff"][k % 4] }); } }
+    if (kind === "star") { burst(x, y, 80, "star", { colors: GOLD, size: 3.6, speed: 260, lift: 40, g: 120, life: 1.5 }); shooting.push({ x: FW + 20, y: FH * (0.04 + Math.random() * 0.06), vx: -FW * 1.1, vy: FH * 0.12, life: 0, max: 1.1, len: 120 }); }
+  }
+  function drawStar(x, y, s, c, a) {
+    ctx.globalAlpha = a;
+    var g = ctx.createRadialGradient(x, y, 0, x, y, s * 3);
+    g.addColorStop(0, c); g.addColorStop(1, "rgba(255,220,140,0)");
+    ctx.fillStyle = g; ctx.fillRect(x - s * 3, y - s * 3, s * 6, s * 6);
+    ctx.fillStyle = "#fff"; ctx.beginPath();
+    ctx.moveTo(x, y - s * 1.8); ctx.lineTo(x + s * 0.35, y - s * 0.35); ctx.lineTo(x + s * 1.8, y); ctx.lineTo(x + s * 0.35, y + s * 0.35);
+    ctx.lineTo(x, y + s * 1.8); ctx.lineTo(x - s * 0.35, y + s * 0.35); ctx.lineTo(x - s * 1.8, y); ctx.lineTo(x - s * 0.35, y - s * 0.35); ctx.closePath(); ctx.fill();
+  }
+  function drawHeart(x, y, s, c, a) {
+    ctx.globalAlpha = a; ctx.fillStyle = c; ctx.beginPath();
+    ctx.moveTo(x, y + s * 0.35);
+    ctx.bezierCurveTo(x - s, y - s * 0.35, x - s * 0.45, y - s, x, y - s * 0.45);
+    ctx.bezierCurveTo(x + s * 0.45, y - s, x + s, y - s * 0.35, x, y + s * 0.35);
+    ctx.fill();
+  }
+  var lastT = 0, shownCap = null, capTimer = 0;
+  function tick(ts) {
+    var dt = Math.min(0.05, (ts - (lastT || ts)) / 1000); lastT = ts;
+    ctx.clearRect(0, 0, FW, FH);
+    for (var i = parts.length - 1; i >= 0; i--) {
+      var p = parts[i];
+      if (p.delay > 0) { p.delay -= dt; continue; }
+      p.life += dt;
+      if (p.life >= p.max) { parts.splice(i, 1); continue; }
+      p.vy += p.g * dt; p.vx *= 1 - 1.2 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      var a = Math.min(1, (1 - p.life / p.max) * 1.6);
+      if (p.kind === "star") { ctx.globalCompositeOperation = "lighter"; drawStar(p.x, p.y, p.s * (0.7 + 0.3 * Math.sin(p.life * 20)), p.c || "#ffd56a", a); }
+      else if (p.kind === "dot") { ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = a; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 6.29); ctx.fill(); }
+      else if (p.kind === "conf") { ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = a; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); }
+      else if (p.kind === "heart") { ctx.globalCompositeOperation = "source-over"; drawHeart(p.x, p.y, p.s, p.c, a); }
+    }
+    ctx.globalCompositeOperation = "lighter";
+    for (var j = shooting.length - 1; j >= 0; j--) {
+      var m = shooting[j]; m.life += dt;
+      if (m.life > m.max) { shooting.splice(j, 1); continue; }
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      var L = m.len || 120, g = ctx.createLinearGradient(m.x, m.y, m.x + L, m.y - L * 0.12);
+      g.addColorStop(0, "rgba(255,250,230,.95)"); g.addColorStop(1, "rgba(255,230,160,0)");
+      ctx.globalAlpha = 1 - m.life / m.max; ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(m.x + L, m.y - L * 0.12); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    if (phase === "story") {
+      var t = mainv.currentTime;
+      var c = CAPTIONS.find(function (k) { return t >= k[0] && t < k[1]; });
+      var text = c ? c[2] : null;
+      if (text !== shownCap) setCaption(text);
+      if (mainv.duration && t >= mainv.duration - 0.06) toLoop();
+    }
+    drawBackdrops();
+    requestAnimationFrame(tick);
+  }
+  function setCaption(text) {
+    shownCap = text;
+    clearTimeout(capTimer);
+    cap.classList.remove("on");
+    if (text) capTimer = setTimeout(function () { cap.textContent = text; cap.classList.add("on"); }, cap.textContent ? 380 : 0);
+  }
+  var bd = document.getElementById("backdrop"), bctx = bd.getContext("2d"), rbg = document.getElementById("rbg"), rctx = rbg.getContext("2d"), bdN = 0;
+  function drawBackdrops() {
+    if (bdN++ % 6) return;
+    var src = reacting || (phase === "loop" ? (loopv.readyState >= 2 ? loopv : stillEnd) : (mainv.readyState >= 2 ? mainv : stillStart));
+    try { if (setName === "port") bctx.drawImage(src, 0, 0, 36, 64); if (reacting && setName === "land") rctx.drawImage(reacting, 0, 0, 36, 64); } catch (e) { /* not ready yet */ }
+  }
+
+  function say(spot, text) {
+    var at = P(spot.at[0], spot.at[1]);
+    var el = document.createElement("div");
+    el.className = "bubble"; el.textContent = text;
+    bubLayer.appendChild(el);
+    var w = el.offsetWidth;
+    el.style.left = Math.min(FW - w / 2 - 8, Math.max(w / 2 + 8, at[0])) + "px";
+    el.style.top = Math.max(60, at[1]) + "px";
+    setTimeout(function () { el.classList.add("out"); setTimeout(function () { el.remove(); }, 320); }, 2200);
+  }
+  function sfx(name) {
+    if (!sound || !soundOn) return;
+    if (name === "sparkle0") sound.sfx("sparkle", 0); else if (name === "sparkle1") sound.sfx("sparkle", 1); else sound.sfx(name, name === "jingle" ? 2 : 0);
+  }
+  var nudgeT = 0;
+  function nudge(x, y) {
+    if (reduced) return;
+    cam.style.transformOrigin = x + "px " + y + "px";
+    cam.style.transform = "scale(1.045)";
+    clearTimeout(nudgeT);
+    nudgeT = setTimeout(function () { cam.style.transform = ""; }, 260);
+  }
+
+  /* a tapped character cuts to their own little film, then back to the room */
+  function playClip(name, x, y) {
+    var v = name === "r1" ? r1v : r2v;
+    if (failed(v)) return;
+    reacting = v;
+    var fl = document.getElementById("flash");
+    fl.style.setProperty("--fxp", x + "px " + y + "px");
+    fl.classList.remove("go"); void fl.offsetWidth; fl.classList.add("go");
+    title.style.opacity = "0"; ring.hidden = true; hint.hidden = true; reopen.hidden = true;
+    if (sound) sound.pause();
+    v.muted = !soundOn;
+    v.currentTime = 0;
+    setTimeout(function () {
+      var pr = v.play();
+      v.classList.add("on");
+      if (setName === "land") rbg.classList.add("on");
+      if (pr && pr.catch) pr.catch(function () { v.muted = true; v.play().catch(endClip); });
+    }, 180);
+  }
+  function endClip() {
+    if (!reacting) return;
+    var v = reacting;
+    reacting = null;
+    var fl = document.getElementById("flash");
+    fl.style.setProperty("--fxp", "50% 50%");
+    fl.classList.remove("go"); void fl.offsetWidth; fl.classList.add("go");
+    setTimeout(function () { v.classList.remove("on"); rbg.classList.remove("on"); setTimeout(function () { v.pause(); }, 400); }, 150);
+    title.style.opacity = "";
+    if (!opened) { ring.hidden = false; hint.hidden = false; } else reopen.hidden = !cardwrap.hidden;
+    if (sound && soundOn) sound.play();
+  }
+  [r1v, r2v].forEach(function (v) {
+    v.addEventListener("ended", endClip);
+    v.addEventListener("timeupdate", function () { if (reacting === v && v.duration && v.currentTime >= v.duration - 0.08) endClip(); });
+  });
+
+  taps.addEventListener("click", function (e) {
+    var r = frame.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (reacting) { endClip(); return; }
+    var pc = toPct(x, y), spot = spotAt(pc[0], pc[1]);
+    if (spot && spot.id === "gift") { tapGift(); return; }
+    nudge(x, y);
+    if (!spot) { effect("sparkle", x, y); sfx("sparkle1"); return; }
+    if (spot.id === "star") { var s = P(spot.at[0], spot.at[1]); effect("star", s[0], s[1] + 20); sfx("sparkle1"); return; }
+    var L = LINES[spot.id];
+    effect(L.fx, x, y, spot);
+    if (L.say) say(spot, L.say());
+    sfx(L.sfx);
+    if (L.clip) setTimeout(function () { playClip(L.clip, x, y); }, 650);
+  });
+
+  function placeRing() {
+    if (!SET) return;
+    var g = P(SET.gift[0], SET.gift[1]);
+    ring.style.left = g[0] + "px"; ring.style.top = g[1] + "px";
+  }
+  function tapGift() {
+    var g = P(SET.gift[0], SET.gift[1]);
+    effect("sparkle", g[0], g[1]);
+    burst(g[0], g[1], 50, "conf", { colors: CONF, size: 5, speed: 240, lift: 260, g: 420, life: 1.8 });
+    if (sound && soundOn) sound.chime();
+    ring.hidden = true; hint.hidden = true; title.classList.remove("on");
+    setTimeout(function () { showCard(g); }, opened ? 150 : 700);
+    opened = true;
+  }
+  function showCard(g) {
+    cardpop.style.setProperty("--fx", (g[0] - FW / 2).toFixed(0) + "px");
+    cardpop.style.setProperty("--fy", (g[1] - FH / 2).toFixed(0) + "px");
+    cardpop.style.animation = "none"; void cardpop.offsetWidth; cardpop.style.animation = "";
+    cardwrap.hidden = false; reopen.hidden = true; tip.hidden = true;
+    setTimeout(function () { document.getElementById("explore").focus({ preventScroll: true }); }, 60);
+  }
+  function closeCard() {
+    cardwrap.hidden = true; reopen.hidden = false; title.classList.add("on");
+    if (!tipShown) {
+      tipShown = true;
+      tip.innerHTML = "Tap anything: <b>Santa</b> and <b>the elves</b> have a surprise, or try <b>the cat</b>, <b>the tree</b>, <b>the star</b>, <b>the wreaths</b>" + (setName === "land" ? ", <b>the window</b>, <b>the fire</b>" : "") + " or <b>the stockings</b>.";
+      tip.hidden = false;
+      setTimeout(function () { tip.hidden = true; }, 7000);
+    }
+  }
+  document.getElementById("explore").addEventListener("click", closeCard);
+  cardwrap.addEventListener("click", function (e) { if (e.target === cardwrap) closeCard(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !cardwrap.hidden) closeCard(); });
+  reopen.addEventListener("click", function () { showCard(P(SET.gift[0], SET.gift[1])); });
+
+  /* ── the story, then the loop ── */
+  function begin() {
+    intro.classList.add("gone");
+    skip.hidden = false; sndBtn.hidden = false;
+    phase = "story";
+    var fail = function () { vnote.hidden = false; setTimeout(function () { vnote.hidden = true; }, 6000); toLoop(); };
+    if (failed(mainv)) { fail(); return; }
+    mainv.muted = !soundOn;
+    mainv.currentTime = 0;
+    var pr = mainv.play();
+    if (pr && pr.catch) pr.catch(function () { mainv.muted = true; mainv.play().catch(fail); });
+    /* unlock the other films on this first tap, so phones let them play later */
+    [loopv, r1v, r2v].forEach(function (v) { v.preload = "auto"; var m = v.muted; v.muted = true; var p2 = v.play(); if (p2 && p2.then) p2.then(function () { v.pause(); v.currentTime = 0; v.muted = m; }).catch(function () { v.muted = m; }); });
+    setTimeout(function () { if (phase === "story" && mainv.currentTime < 0.2 && mainv.readyState < 3) fail(); }, 6000);
+  }
+  function toLoop() {
+    if (phase === "loop") return;
+    phase = "loop";
+    setCaption(null);
+    skip.hidden = true;
+    stillStart.hidden = true; stillEnd.hidden = false;
+    mainv.style.opacity = "0"; mainv.pause();
+    loopv.currentTime = 0;
+    var pr = loopv.play(); if (pr && pr.catch) pr.catch(function () {});
+    document.getElementById("scrimB").style.opacity = "0.55";
+    document.getElementById("scrimT").style.opacity = "1";
+    title.classList.add("on");
+    taps.hidden = false;
+    if (!opened) { ring.hidden = false; hint.hidden = false; placeRing(); } else reopen.hidden = false;
+    if (sound && soundOn) sound.play();
+  }
+  document.getElementById("begin").addEventListener("click", begin);
+  skip.addEventListener("click", toLoop);
+  document.getElementById("again").addEventListener("click", function () {
+    cardwrap.hidden = true; reopen.hidden = true; ring.hidden = true; hint.hidden = true; taps.hidden = true; tip.hidden = true;
+    title.classList.remove("on"); document.getElementById("scrimT").style.opacity = "0"; document.getElementById("scrimB").style.opacity = "1";
+    loopv.pause(); loopv.style.opacity = "0"; stillEnd.hidden = true; mainv.style.opacity = "";
+    if (sound) sound.pause();
+    opened = false; phase = "intro";
+    begin();
+  });
+  sndBtn.addEventListener("click", function () {
+    soundOn = !soundOn;
+    sndBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    mainv.muted = !soundOn; r1v.muted = !soundOn; r2v.muted = !soundOn;
+    if (sound) { if (soundOn && phase === "loop" && !reacting) sound.play(); else sound.pause(); }
+  });
+
+  layout();
+  requestAnimationFrame(tick);
+  window.cardDebug = { get phase() { return phase; }, get set() { return setName; }, get reacting() { return reacting ? reacting.id : null; }, main: mainv, loop: loopv, P: function (a, b) { return P(a, b); } };
+})();
+</script>
+
+</body>
+</html>
