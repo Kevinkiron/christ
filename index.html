@@ -34,7 +34,8 @@ body { background: var(--night); color: var(--paper); font-family: var(--sans); 
 .cam canvas.rbg.on { opacity: 1; }
 .cam video.letter { opacity: 0; transition: opacity .3s ease; }
 .cam video.letter.on { opacity: 1; }
-.frame:not(.wide) .cam video.letter { top: 50%; bottom: auto; height: auto; aspect-ratio: 4 / 5; transform: translateY(-50%); -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); }
+.wide .cam video.react.w16 { object-fit: cover; }
+.frame:not(.wide) .cam video.letter, .frame:not(.wide) .cam video.w16 { top: 50%; bottom: auto; height: auto; aspect-ratio: 4 / 5; transform: translateY(-50%); -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .taps { position: absolute; inset: 0; cursor: pointer; touch-action: manipulation; }
 .flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--fxp, 50% 50%), rgba(255,247,220,.95), rgba(255,214,120,.55) 35%, rgba(255,200,100,0) 75%); }
@@ -136,6 +137,7 @@ body { background: var(--night); color: var(--paper); font-family: var(--sans); 
     <canvas class="rbg" id="rbg" width="36" height="64" aria-hidden="true"></canvas>
     <video class="react" id="r1v" playsinline webkit-playsinline preload="metadata" src="media/react_santa.mp4"></video>
     <video class="react" id="r2v" playsinline webkit-playsinline preload="metadata" src="media/react_elves.mp4"></video>
+    <video class="react w16" id="r3v" playsinline webkit-playsinline preload="metadata" src="media/react_tree.mp4"></video>
     <video class="letter" id="lv" playsinline webkit-playsinline preload="metadata" src="media/letter.mp4"></video>
   </div>
   <div class="scrim-t" id="scrimT"></div>
@@ -436,7 +438,7 @@ function createSound(opts) {
     cat: { say: function () { return "Purrr…"; }, sfx: "meow", fx: "hearts" },
     wreath: { sfx: "sparkle1", fx: "ring" },
     stocking: { sfx: "pop", fx: "confetti" },
-    tree: { sfx: "sparkle0", fx: "twinkle" },
+    tree: { sfx: "sparkle0", fx: "twinkle", clip: "r3" },
     rug: { sfx: "crunch", fx: "fluff" },
     window: { sfx: "whoosh", fx: "snow" },
     fire: { sfx: "fire", fx: "embers" },
@@ -444,7 +446,7 @@ function createSound(opts) {
 
   var frame = document.getElementById("frame"), cam = document.getElementById("cam"), fx = document.getElementById("fx"), ctx = fx.getContext("2d");
   var mainv = document.getElementById("mainv"), loopv = document.getElementById("loopv"), r1v = document.getElementById("r1v"), r2v = document.getElementById("r2v");
-  var lv = document.getElementById("lv"), lettering = false, letterStage = 0, letterT = null, LETTER_OPEN = 2.25;
+  var r3v = document.getElementById("r3v"), lv = document.getElementById("lv"), lettering = false, letterStage = 0, letterT = null, LETTER_OPEN = 2.25;
   var stillStart = document.getElementById("stillStart"), stillEnd = document.getElementById("stillEnd"), vnote = document.getElementById("vnote");
   var taps = document.getElementById("taps"), bubLayer = document.getElementById("bubbles");
   var cap = document.getElementById("cap"), title = document.getElementById("title"), ring = document.getElementById("ring"), hint = document.getElementById("hint"), tip = document.getElementById("tip");
@@ -481,7 +483,7 @@ function createSound(opts) {
   var SET = null, setName = "";
 
   function failed(v) { return v.dataset.state === "failed"; }
-  [mainv, loopv, r1v, r2v, lv].forEach(function (v) { v.addEventListener("error", function () { v.dataset.state = "failed"; }); });
+  [mainv, loopv, r1v, r2v, r3v, lv].forEach(function (v) { v.addEventListener("error", function () { v.dataset.state = "failed"; }); });
 
   /* choose the cut that fits the screen; switch cleanly if the phone is turned */
   function pickSet() {
@@ -622,7 +624,7 @@ function createSound(opts) {
     if (bdN++ % 6) return;
     var rv = reacting || (lettering ? lv : null);
     var src = rv || (phase === "loop" ? (loopv.readyState >= 2 ? loopv : stillEnd) : (mainv.readyState >= 2 ? mainv : stillStart));
-    try { if (setName === "port") bctx.drawImage(src, 0, 0, 36, 64); if (rv && (setName === "land" || rv === lv)) rctx.drawImage(rv, 0, 0, 36, 64); } catch (e) { /* not ready yet */ }
+    try { if (setName === "port") bctx.drawImage(src, 0, 0, 36, 64); if (rv && (setName === "land" || rv === lv || rv === r3v)) rctx.drawImage(rv, 0, 0, 36, 64); } catch (e) { /* not ready yet */ }
   }
 
   function say(spot, text) {
@@ -650,7 +652,7 @@ function createSound(opts) {
 
   /* a tapped character cuts to their own little film, then back to the room */
   function playClip(name, x, y) {
-    var v = name === "r1" ? r1v : r2v;
+    var v = name === "r1" ? r1v : name === "r2" ? r2v : r3v;
     if (failed(v)) return;
     reacting = v;
     var fl = document.getElementById("flash");
@@ -665,7 +667,7 @@ function createSound(opts) {
     setTimeout(function () {
       var pr = v.play();
       v.classList.add("on");
-      if (setName === "land") rbg.classList.add("on");
+      if (setName === "land" || v === r3v) rbg.classList.add("on");
       if (pr && pr.catch) pr.catch(function () { v.muted = true; v.play().catch(endClip); });
     }, 180);
   }
@@ -682,7 +684,7 @@ function createSound(opts) {
     if (sound && soundOn) sound.play();
     if (soundOn) musicLevel(MUSIC, 0.5);
   }
-  [r1v, r2v].forEach(function (v) {
+  [r1v, r2v, r3v].forEach(function (v) {
     v.addEventListener("ended", endClip);
     v.addEventListener("timeupdate", function () { if (reacting === v && v.duration && v.currentTime >= v.duration - 0.08) endClip(); });
   });
@@ -764,7 +766,7 @@ function createSound(opts) {
     cardwrap.hidden = true; reopen.hidden = false; title.classList.add("on");
     if (!tipShown) {
       tipShown = true;
-      tip.innerHTML = "Tap anything: <b>Santa</b> and <b>the elves</b> have a surprise, or try <b>the cat</b>, <b>the tree</b>, <b>the star</b>, <b>the wreaths</b>" + (setName === "land" ? ", <b>the window</b>, <b>the fire</b>" : "") + " or <b>the stockings</b>.";
+      tip.innerHTML = "Tap anything: <b>Santa</b>, <b>the elves</b> and <b>the tree</b> have a surprise, or try <b>the cat</b>, <b>the star</b>, <b>the wreaths</b>" + (setName === "land" ? ", <b>the window</b>, <b>the fire</b>" : "") + " or <b>the stockings</b>.";
       tip.hidden = false;
       setTimeout(function () { tip.hidden = true; }, 7000);
     }
@@ -787,7 +789,7 @@ function createSound(opts) {
     var pr = mainv.play();
     if (pr && pr.catch) pr.catch(function () { mainv.muted = true; mainv.play().catch(fail); });
     /* unlock the other films on this first tap, so phones let them play later */
-    [loopv, r1v, r2v, lv].forEach(function (v) { v.preload = "auto"; var m = v.muted; v.muted = true; var p2 = v.play(); if (p2 && p2.then) p2.then(function () { v.pause(); v.currentTime = 0; v.muted = m; }).catch(function () { v.muted = m; }); });
+    [loopv, r1v, r2v, r3v, lv].forEach(function (v) { v.preload = "auto"; var m = v.muted; v.muted = true; var p2 = v.play(); if (p2 && p2.then) p2.then(function () { v.pause(); v.currentTime = 0; v.muted = m; }).catch(function () { v.muted = m; }); });
     setTimeout(function () { if (phase === "story" && mainv.currentTime < 0.2 && mainv.readyState < 3) fail(); }, 6000);
   }
   function toLoop() {
@@ -820,7 +822,7 @@ function createSound(opts) {
   sndBtn.addEventListener("click", function () {
     soundOn = !soundOn;
     sndBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
-    r1v.muted = !soundOn; r2v.muted = !soundOn; lv.muted = !soundOn;
+    r1v.muted = !soundOn; r2v.muted = !soundOn; r3v.muted = !soundOn; lv.muted = !soundOn;
     musicLevel(soundOn ? (reacting ? MUSIC * 0.22 : letterStage === 1 ? MUSIC * 0.25 : MUSIC) : 0, 0.15);
     if (!mgain) music.muted = !soundOn;
     if (sound) { if (soundOn && phase === "loop" && !reacting) sound.play(); else sound.pause(); }
