@@ -32,6 +32,9 @@ body { background: var(--night); color: var(--paper); font-family: var(--sans); 
 .wide .cam video.react { object-fit: contain; }
 .cam canvas.rbg { filter: blur(26px) brightness(.6) saturate(1.2); transform: scale(1.15); opacity: 0; transition: opacity .35s ease; }
 .cam canvas.rbg.on { opacity: 1; }
+.cam video.letter { opacity: 0; transition: opacity .3s ease; }
+.cam video.letter.on { opacity: 1; }
+.frame:not(.wide) .cam video.letter { top: 50%; bottom: auto; height: auto; aspect-ratio: 4 / 5; transform: translateY(-50%); -webkit-mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(transparent, #000 8%, #000 92%, transparent); }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .taps { position: absolute; inset: 0; cursor: pointer; touch-action: manipulation; }
 .flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--fxp, 50% 50%), rgba(255,247,220,.95), rgba(255,214,120,.55) 35%, rgba(255,200,100,0) 75%); }
@@ -123,15 +126,17 @@ body { background: var(--night); color: var(--paper); font-family: var(--sans); 
 
 
 <canvas class="backdrop" id="backdrop" width="36" height="64" aria-hidden="true"></canvas>
+<audio id="music" src="media/music.mp3" preload="auto" loop></audio>
 <main class="frame" id="frame">
   <div class="cam" id="cam">
     <img class="still" id="stillStart" alt="">
     <img class="still" id="stillEnd" alt="" hidden>
-    <video id="mainv" playsinline webkit-playsinline preload="auto"></video>
+    <video id="mainv" playsinline webkit-playsinline preload="auto" muted></video>
     <video id="loopv" playsinline webkit-playsinline muted loop preload="auto"></video>
     <canvas class="rbg" id="rbg" width="36" height="64" aria-hidden="true"></canvas>
     <video class="react" id="r1v" playsinline webkit-playsinline preload="metadata" src="media/react_santa.mp4"></video>
     <video class="react" id="r2v" playsinline webkit-playsinline preload="metadata" src="media/react_elves.mp4"></video>
+    <video class="letter" id="lv" playsinline webkit-playsinline preload="metadata" src="media/letter.mp4"></video>
   </div>
   <div class="scrim-t" id="scrimT"></div>
   <div class="scrim-b" id="scrimB"></div>
@@ -184,7 +189,8 @@ body { background: var(--night); color: var(--paper); font-family: var(--sans); 
 
 <script>
 /* ── sound: a music-box "Jingle Bells" (public domain, 1857), sleigh bells and wind, all synthesised ── */
-function createSound() {
+function createSound(opts) {
+  var withMusic = !(opts && opts.noMusic);
   var AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
   var ctx = null, master, verb, dry, timer = 0, next = 0, step = 0, on = false, wind = null;
@@ -272,9 +278,11 @@ function createSound() {
       var e = events[step % events.length];
       var loop = Math.floor(step / events.length);
       var t = Math.max(next, ctx.currentTime);
-      if (e.kind === "m") bell(e.f, t, 0.16, 1.6);
-      else if (e.kind === "b") bass(e.f, t);
-      else jingle(t, e.v);
+      if (withMusic) {
+        if (e.kind === "m") bell(e.f, t, 0.16, 1.6);
+        else if (e.kind === "b") bass(e.f, t);
+        else jingle(t, e.v);
+      }
       step++;
       var n = events[step % events.length];
       var nb = n.b + Math.floor(step / events.length) * LOOP;
@@ -436,18 +444,44 @@ function createSound() {
 
   var frame = document.getElementById("frame"), cam = document.getElementById("cam"), fx = document.getElementById("fx"), ctx = fx.getContext("2d");
   var mainv = document.getElementById("mainv"), loopv = document.getElementById("loopv"), r1v = document.getElementById("r1v"), r2v = document.getElementById("r2v");
+  var lv = document.getElementById("lv"), lettering = false, letterStage = 0, letterT = null, LETTER_OPEN = 2.25;
   var stillStart = document.getElementById("stillStart"), stillEnd = document.getElementById("stillEnd"), vnote = document.getElementById("vnote");
   var taps = document.getElementById("taps"), bubLayer = document.getElementById("bubbles");
   var cap = document.getElementById("cap"), title = document.getElementById("title"), ring = document.getElementById("ring"), hint = document.getElementById("hint"), tip = document.getElementById("tip");
   var intro = document.getElementById("intro"), skip = document.getElementById("skip"), sndBtn = document.getElementById("snd"), reopen = document.getElementById("reopen");
   var cardwrap = document.getElementById("cardwrap"), cardpop = document.getElementById("cardpop");
   var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  var sound = typeof createSound === "function" ? createSound() : null;
+  var sound = typeof createSound === "function" ? createSound({ noMusic: true }) : null;
+  /* the card's song: one track from Begin through the whole card, ducked under the reaction clips.
+     Played through Web Audio where possible, because phones ignore an audio element's volume. */
+  var music = document.getElementById("music"), mctx = null, mgain = null, MUSIC = 0.9;
+  function musicSetup() {
+    if (mctx || location.protocol === "file:") return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      mctx = new AC();
+      var src = mctx.createMediaElementSource(music);
+      mgain = mctx.createGain(); mgain.gain.value = 0;
+      src.connect(mgain); mgain.connect(mctx.destination);
+    } catch (e) { mctx = null; mgain = null; }
+  }
+  function musicLevel(v, tc) {
+    if (mgain) { var n = mctx.currentTime; mgain.gain.cancelScheduledValues(n); mgain.gain.setValueAtTime(mgain.gain.value, n); mgain.gain.setTargetAtTime(v, n, tc || 0.25); }
+    else { music.volume = Math.max(0, Math.min(1, v)); }
+  }
+  function musicStart() {
+    musicSetup();
+    if (mctx && mctx.state === "suspended") mctx.resume();
+    music.currentTime = 0;
+    musicLevel(0, 0.01);
+    var pr = music.play(); if (pr && pr.catch) pr.catch(function () {});
+    musicLevel(soundOn ? MUSIC : 0, 0.4);
+  }
   var soundOn = true, phase = "intro", opened = false, tipShown = false, reacting = null;
   var SET = null, setName = "";
 
   function failed(v) { return v.dataset.state === "failed"; }
-  [mainv, loopv, r1v, r2v].forEach(function (v) { v.addEventListener("error", function () { v.dataset.state = "failed"; }); });
+  [mainv, loopv, r1v, r2v, lv].forEach(function (v) { v.addEventListener("error", function () { v.dataset.state = "failed"; }); });
 
   /* choose the cut that fits the screen; switch cleanly if the phone is turned */
   function pickSet() {
@@ -586,8 +620,9 @@ function createSound() {
   var bd = document.getElementById("backdrop"), bctx = bd.getContext("2d"), rbg = document.getElementById("rbg"), rctx = rbg.getContext("2d"), bdN = 0;
   function drawBackdrops() {
     if (bdN++ % 6) return;
-    var src = reacting || (phase === "loop" ? (loopv.readyState >= 2 ? loopv : stillEnd) : (mainv.readyState >= 2 ? mainv : stillStart));
-    try { if (setName === "port") bctx.drawImage(src, 0, 0, 36, 64); if (reacting && setName === "land") rctx.drawImage(reacting, 0, 0, 36, 64); } catch (e) { /* not ready yet */ }
+    var rv = reacting || (lettering ? lv : null);
+    var src = rv || (phase === "loop" ? (loopv.readyState >= 2 ? loopv : stillEnd) : (mainv.readyState >= 2 ? mainv : stillStart));
+    try { if (setName === "port") bctx.drawImage(src, 0, 0, 36, 64); if (rv && (setName === "land" || rv === lv)) rctx.drawImage(rv, 0, 0, 36, 64); } catch (e) { /* not ready yet */ }
   }
 
   function say(spot, text) {
@@ -623,8 +658,10 @@ function createSound() {
     fl.classList.remove("go"); void fl.offsetWidth; fl.classList.add("go");
     title.style.opacity = "0"; ring.hidden = true; hint.hidden = true; reopen.hidden = true;
     if (sound) sound.pause();
+    if (soundOn) musicLevel(MUSIC * 0.22, 0.2);
     v.muted = !soundOn;
     v.currentTime = 0;
+    v.volume = 1;
     setTimeout(function () {
       var pr = v.play();
       v.classList.add("on");
@@ -643,6 +680,7 @@ function createSound() {
     title.style.opacity = "";
     if (!opened) { ring.hidden = false; hint.hidden = false; } else reopen.hidden = !cardwrap.hidden;
     if (sound && soundOn) sound.play();
+    if (soundOn) musicLevel(MUSIC, 0.5);
   }
   [r1v, r2v].forEach(function (v) {
     v.addEventListener("ended", endClip);
@@ -651,6 +689,7 @@ function createSound() {
 
   taps.addEventListener("click", function (e) {
     var r = frame.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (lettering) { if (letterStage === 1) letterToCard(); return; }
     if (reacting) { endClip(); return; }
     var pc = toPct(x, y), spot = spotAt(pc[0], pc[1]);
     if (spot && spot.id === "gift") { tapGift(); return; }
@@ -675,9 +714,44 @@ function createSound() {
     burst(g[0], g[1], 50, "conf", { colors: CONF, size: 5, speed: 240, lift: 260, g: 420, life: 1.8 });
     if (sound && soundOn) sound.chime();
     ring.hidden = true; hint.hidden = true; title.classList.remove("on");
-    setTimeout(function () { showCard(g); }, opened ? 150 : 700);
     opened = true;
+    if (!failed(lv)) { setTimeout(function () { playLetter(g); }, 380); return; }
+    setTimeout(function () { showCard(g); }, 700);
   }
+  /* the gift sends the letter flying to the door; the moment it opens, it becomes our card */
+  function playLetter(g) {
+    lettering = true; letterStage = 1;
+    var fl = document.getElementById("flash");
+    fl.style.setProperty("--fxp", g[0] + "px " + g[1] + "px");
+    fl.classList.remove("go"); void fl.offsetWidth; fl.classList.add("go");
+    reopen.hidden = true; tip.hidden = true;
+    if (sound) sound.pause();
+    if (soundOn) musicLevel(MUSIC * 0.25, 0.2);
+    lv.muted = !soundOn; lv.volume = 1; lv.currentTime = 0;
+    rbg.classList.add("on");
+    var pr = lv.play();
+    lv.classList.add("on");
+    if (pr && pr.catch) pr.catch(function () { lv.muted = true; lv.play().catch(letterToCard); });
+    clearTimeout(letterT); letterT = setTimeout(letterToCard, 6000);
+  }
+  function letterToCard() {
+    if (letterStage !== 1) return;
+    letterStage = 2;
+    clearTimeout(letterT);
+    if (soundOn) musicLevel(MUSIC, 1.2);
+    showCard([FW / 2, FH / 2]);
+  }
+  function endLetter() {
+    if (!lettering) return;
+    lettering = false; letterStage = 0;
+    clearTimeout(letterT);
+    lv.classList.remove("on"); rbg.classList.remove("on");
+    setTimeout(function () { if (!lettering) lv.pause(); }, 350);
+    if (soundOn) musicLevel(MUSIC, 0.4);
+    if (sound && soundOn && phase === "loop") sound.play();
+  }
+  lv.addEventListener("timeupdate", function () { if (letterStage === 1 && lv.currentTime >= LETTER_OPEN) letterToCard(); });
+  lv.addEventListener("ended", letterToCard);
   function showCard(g) {
     cardpop.style.setProperty("--fx", (g[0] - FW / 2).toFixed(0) + "px");
     cardpop.style.setProperty("--fy", (g[1] - FH / 2).toFixed(0) + "px");
@@ -686,6 +760,7 @@ function createSound() {
     setTimeout(function () { document.getElementById("explore").focus({ preventScroll: true }); }, 60);
   }
   function closeCard() {
+    endLetter();
     cardwrap.hidden = true; reopen.hidden = false; title.classList.add("on");
     if (!tipShown) {
       tipShown = true;
@@ -706,12 +781,13 @@ function createSound() {
     phase = "story";
     var fail = function () { vnote.hidden = false; setTimeout(function () { vnote.hidden = true; }, 6000); toLoop(); };
     if (failed(mainv)) { fail(); return; }
-    mainv.muted = !soundOn;
+    mainv.muted = true;
+    musicStart();
     mainv.currentTime = 0;
     var pr = mainv.play();
     if (pr && pr.catch) pr.catch(function () { mainv.muted = true; mainv.play().catch(fail); });
     /* unlock the other films on this first tap, so phones let them play later */
-    [loopv, r1v, r2v].forEach(function (v) { v.preload = "auto"; var m = v.muted; v.muted = true; var p2 = v.play(); if (p2 && p2.then) p2.then(function () { v.pause(); v.currentTime = 0; v.muted = m; }).catch(function () { v.muted = m; }); });
+    [loopv, r1v, r2v, lv].forEach(function (v) { v.preload = "auto"; var m = v.muted; v.muted = true; var p2 = v.play(); if (p2 && p2.then) p2.then(function () { v.pause(); v.currentTime = 0; v.muted = m; }).catch(function () { v.muted = m; }); });
     setTimeout(function () { if (phase === "story" && mainv.currentTime < 0.2 && mainv.readyState < 3) fail(); }, 6000);
   }
   function toLoop() {
@@ -733,6 +809,7 @@ function createSound() {
   document.getElementById("begin").addEventListener("click", begin);
   skip.addEventListener("click", toLoop);
   document.getElementById("again").addEventListener("click", function () {
+    endLetter();
     cardwrap.hidden = true; reopen.hidden = true; ring.hidden = true; hint.hidden = true; taps.hidden = true; tip.hidden = true;
     title.classList.remove("on"); document.getElementById("scrimT").style.opacity = "0"; document.getElementById("scrimB").style.opacity = "1";
     loopv.pause(); loopv.style.opacity = "0"; stillEnd.hidden = true; mainv.style.opacity = "";
@@ -743,7 +820,9 @@ function createSound() {
   sndBtn.addEventListener("click", function () {
     soundOn = !soundOn;
     sndBtn.setAttribute("aria-pressed", soundOn ? "true" : "false");
-    mainv.muted = !soundOn; r1v.muted = !soundOn; r2v.muted = !soundOn;
+    r1v.muted = !soundOn; r2v.muted = !soundOn; lv.muted = !soundOn;
+    musicLevel(soundOn ? (reacting ? MUSIC * 0.22 : letterStage === 1 ? MUSIC * 0.25 : MUSIC) : 0, 0.15);
+    if (!mgain) music.muted = !soundOn;
     if (sound) { if (soundOn && phase === "loop" && !reacting) sound.play(); else sound.pause(); }
   });
 
